@@ -1,13 +1,12 @@
-import pandas as pd
-import numpy as np
-import scipy.stats
-from scipy.stats import rv_continuous
-
-from typing import Dict, List, Optional, Tuple, Union, Any
 import logging
 from dataclasses import dataclass, field
-from scipy.stats import entropy as kl_div, kstest
+from typing import Any, Dict, List, Optional, Tuple, Union
 
+import numpy as np
+import pandas as pd
+import scipy.stats
+from scipy.stats import entropy as kl_div
+from scipy.stats import kstest, rv_continuous
 
 logger = logging.getLogger(__name__)
 
@@ -80,7 +79,10 @@ class DistributionFitter:
             )
             fitted_pdf: np.ndarray = self.get_pdf(data_trimmed, distribution, fitted_params)
             goodness_of_fit_metrics: DistributionFitterResult = self.get_goodness_of_fit_metrics(
-                data=data_trimmed, params=fitted_params, fitted_pdf=fitted_pdf, distribution_name=distribution, 
+                data=data_trimmed,
+                params=fitted_params,
+                fitted_pdf=fitted_pdf,
+                distribution_name=distribution,
             )
 
             self._results[distribution] = goodness_of_fit_metrics
@@ -148,7 +150,7 @@ class DistributionFitter:
             ks_statistic=ks_statistic,
             ks_p_value=ks_p_value,
         )
-        
+
     def summary(self) -> pd.DataFrame:
         """
         Returns a summary of the fitted distributions
