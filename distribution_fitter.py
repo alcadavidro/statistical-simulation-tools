@@ -36,9 +36,15 @@ class DistributionFitter:
     ) -> None:
         self._data: np.ndarray = None
         self._results: Dict[str, Any] = {}
-        self._distributions = distributions
-        self._bins = bins
-        self._kde = kde
+        self._distributions: List[str] = distributions
+        self._bins: int = bins
+        self._kde: bool = kde
+        self._is_fitted: bool = False
+        
+        
+    @property.getter
+    def is_fitted(self) -> bool:
+        return self._is_fitted
 
     @staticmethod
     def _trim_data(
@@ -74,18 +80,34 @@ class DistributionFitter:
         self._data = data_trimmed
 
         for distribution in self._distributions:
-            fitted_params: DistributionParameters = self.fit_single_distribution(
-                data=data_trimmed, distribution_name=distribution
-            )
-            fitted_pdf: np.ndarray = self.get_pdf(data_trimmed, distribution, fitted_params)
-            goodness_of_fit_metrics: DistributionFitterResult = self.get_goodness_of_fit_metrics(
-                data=data_trimmed,
-                params=fitted_params,
-                fitted_pdf=fitted_pdf,
-                distribution_name=distribution,
-            )
+            try:
+                fitted_params: DistributionParameters = self.fit_single_distribution(
+                    data=data_trimmed, distribution_name=distribution
+                )
+                fitted_pdf: np.ndarray = self.get_pdf(data_trimmed, distribution, fitted_params)
+                goodness_of_fit_metrics: DistributionFitterResult = self.get_goodness_of_fit_metrics(
+                    data=data_trimmed,
+                    params=fitted_params,
+                    fitted_pdf=fitted_pdf,
+                    distribution_name=distribution,
+                )
 
-            self._results[distribution] = goodness_of_fit_metrics
+                self._results[distribution] = goodness_of_fit_metrics
+            except Exception as e:
+                logger.error("Error while fitting distribution: %s", e)
+                self._results[distribution] = DistributionFitterResult(
+                    distribution=distribution, 
+                    fitted_pdf=np.zeros(self._bins), 
+                    squared_error=np.inf, 
+                    aic=np.inf,
+                    bic=np.inf,
+                    kullberg_divergence=np.inf,
+                    ks_statistic=np.inf, 
+                    ks_p_value=np.inf,
+                    fitted_params={}
+                )
+        # Changing the state of the object to fitted
+        self._is_fitted = True
 
     def fit_single_distribution(
         self, data: np.ndarray, distribution_name: str, **kwargs
@@ -111,6 +133,18 @@ class DistributionFitter:
         _, x = self.get_histogram(data=data, bins=self._bins, density=self._kde)
         pdf = distribution.pdf(x, **fitted_params)
         return pdf
+
+    def get_distribution(self, distribution_name: str) -> rv_continuous:
+        assert self._is_fitted, "You need to fit the distribution first"
+
+        return getattr(scipy.stats, distribution_name)(
+            **self._results[distribution_name].fitted_params
+        )
+
+    def get_distribution_parameters(self, distribution_name: str) -> DistributionParameters:
+        assert self._is_fitted, "You need to fit the distribution first"
+
+        return self._results[distribution_name].fitted_params
 
     def get_goodness_of_fit_metrics(
         self,
@@ -151,9 +185,18 @@ class DistributionFitter:
             ks_p_value=ks_p_value,
         )
 
-    def summary(self) -> pd.DataFrame:
+    def summary(self, sort_by: Optional[str] = None) -> pd.DataFrame:
         """
         Returns a summary of the fitted distributions
         """
-        summary = pd.DataFrame.from_dict(self._results, orient="index")
+
+        assert self._is_fitted, "You need to fit the distribution first"
+
+        sort_by = sort_by if sort_by is not None else "squared_error"
+
+        summary = (
+            pd.DataFrame.from_dict(self._results, orient="index")
+            .drop(columns=["fitted_pdf"])
+            .sort_values(by=sort_by)
+        )
         return summary
