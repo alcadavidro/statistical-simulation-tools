@@ -22,14 +22,18 @@ class DistributionValidator:
         )
         fig, ax = plt.subplots(ncols=3, figsize=(21, 6))
 
-        ax[0] = cls.qq_plot(ax=ax[0], theoretical_data=theoretical_data, sample_data=sample_data, kwargs=kwargs)
-        ax[1] = cls.plot_ecdf(ax=ax[1], theoretical_data=theoretical_data, sample_data=sample_data, kwargs=kwargs)
+        ax[0] = cls.qq_plot(
+            ax=ax[0], theoretical_data=theoretical_data, sample_data=sample_data, kwargs=kwargs
+        )
+        ax[1] = cls.plot_ecdf(
+            ax=ax[1], theoretical_data=theoretical_data, sample_data=sample_data, kwargs=kwargs
+        )
         ax[2] = cls.plot_histogram(
             ax=ax[2], theoretical_data=theoretical_data, sample_data=sample_data, kwargs=kwargs
         )
-        
+
         suptitle = kwargs.get('suptitle', 'Goodness of Fit')
-        
+
         fig.suptitle(suptitle)
 
         plt.show()
