@@ -40,9 +40,8 @@ class DistributionFitter:
         self._bins: int = bins
         self._kde: bool = kde
         self._is_fitted: bool = False
-        
-        
-    @property.getter
+
+    @property
     def is_fitted(self) -> bool:
         return self._is_fitted
 
@@ -85,26 +84,28 @@ class DistributionFitter:
                     data=data_trimmed, distribution_name=distribution
                 )
                 fitted_pdf: np.ndarray = self.get_pdf(data_trimmed, distribution, fitted_params)
-                goodness_of_fit_metrics: DistributionFitterResult = self.get_goodness_of_fit_metrics(
-                    data=data_trimmed,
-                    params=fitted_params,
-                    fitted_pdf=fitted_pdf,
-                    distribution_name=distribution,
+                goodness_of_fit_metrics: DistributionFitterResult = (
+                    self.get_goodness_of_fit_metrics(
+                        data=data_trimmed,
+                        params=fitted_params,
+                        fitted_pdf=fitted_pdf,
+                        distribution_name=distribution,
+                    )
                 )
 
                 self._results[distribution] = goodness_of_fit_metrics
             except Exception as e:
                 logger.error("Error while fitting distribution: %s", e)
                 self._results[distribution] = DistributionFitterResult(
-                    distribution=distribution, 
-                    fitted_pdf=np.zeros(self._bins), 
-                    squared_error=np.inf, 
+                    distribution=distribution,
+                    fitted_pdf=np.zeros(self._bins),
+                    squared_error=np.inf,
                     aic=np.inf,
                     bic=np.inf,
                     kullberg_divergence=np.inf,
-                    ks_statistic=np.inf, 
+                    ks_statistic=np.inf,
                     ks_p_value=np.inf,
-                    fitted_params={}
+                    fitted_params={},
                 )
         # Changing the state of the object to fitted
         self._is_fitted = True
@@ -185,7 +186,7 @@ class DistributionFitter:
             ks_p_value=ks_p_value,
         )
 
-    def summary(self, sort_by: Optional[str] = None) -> pd.DataFrame:
+    def summary(self, sort_by: Optional[str] = None, top_n: Optional[int] = None) -> pd.DataFrame:
         """
         Returns a summary of the fitted distributions
         """
@@ -199,4 +200,7 @@ class DistributionFitter:
             .drop(columns=["fitted_pdf"])
             .sort_values(by=sort_by)
         )
+
+        if top_n is not None:
+            summary = summary.head(top_n)
         return summary
