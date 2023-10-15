@@ -13,6 +13,7 @@ class DistributionValidator:
         distribution_fitter: DistributionFitter,
         distribution_name: str,
         sample_proportion: float = 0.01,
+        **kwargs
     ) -> None:
         theoretical_data, sample_data = cls.sample_data(
             distribution_fitter=distribution_fitter,
@@ -21,11 +22,15 @@ class DistributionValidator:
         )
         fig, ax = plt.subplots(ncols=3, figsize=(21, 6))
 
-        ax[0] = cls.qq_plot(ax=ax[0], theoretical_data=theoretical_data, sample_data=sample_data)
-        ax[1] = cls.plot_ecdf(ax=ax[1], theoretical_data=theoretical_data, sample_data=sample_data)
+        ax[0] = cls.qq_plot(ax=ax[0], theoretical_data=theoretical_data, sample_data=sample_data, kwargs=kwargs)
+        ax[1] = cls.plot_ecdf(ax=ax[1], theoretical_data=theoretical_data, sample_data=sample_data, kwargs=kwargs)
         ax[2] = cls.plot_histogram(
-            ax=ax[2], theoretical_data=theoretical_data, sample_data=sample_data
+            ax=ax[2], theoretical_data=theoretical_data, sample_data=sample_data, kwargs=kwargs
         )
+        
+        suptitle = kwargs.get('suptitle', 'Goodness of Fit')
+        
+        fig.suptitle(suptitle)
 
         plt.show()
 
@@ -77,8 +82,9 @@ class DistributionValidator:
         title = kwargs.get('title', 'ECDF Plot for Goodness of Fit')
 
         sns.ecdfplot(theoretical_data, label='Theoretical Data', ax=ax)
-        sns.ecdfplot(sample_data, label='Theoretical Data', ax=ax)
+        sns.ecdfplot(sample_data, label='Sample Data', ax=ax)
         ax.set_title(title)
+        ax.legend()
         return ax
 
     @classmethod
@@ -87,7 +93,15 @@ class DistributionValidator:
     ) -> plt.Axes:
         title = kwargs.get('title', 'Histogram Plot for Goodness of Fit')
 
-        sns.histplot(theoretical_data, label='Theoretical Data', ax=ax)
-        sns.histplot(sample_data, label='Theoretical Data', ax=ax)
+        sns.histplot(
+            theoretical_data,
+            label='Theoretical Data',
+            element='step',
+            stat='density',
+            common_norm=False,
+            ax=ax,
+        )
+        sns.histplot(sample_data, label='Sample Data', stat='density', common_norm=False, ax=ax)
         ax.set_title(title)
+        ax.legend()
         return ax

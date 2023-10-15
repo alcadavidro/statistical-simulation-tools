@@ -1,4 +1,5 @@
 import numpy as np
+import pandas as pd
 import scipy.stats
 
 from scipy.stats import skew, sem, iqr
@@ -64,3 +65,12 @@ def doanes_bins(data: np.ndarray) -> int:
     std_err_skew = sem(data) / np.sqrt(n)
     bins = int(1 + np.log2(n) + np.log2(1 + abs(skewness) / std_err_skew))
     return bins
+
+
+def filterByLast(df: pd.DataFrame, partition_by: str, order_by: str) -> pd.DataFrame:
+    return df.assign(
+        row_number=df\
+            .groupby(partition_by)[order_by]\
+                .rank(method="first", ascending=False)
+                )\
+            .query("row_number == 1")
