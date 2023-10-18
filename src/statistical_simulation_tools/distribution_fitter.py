@@ -204,3 +204,40 @@ class DistributionFitter:
         if top_n is not None:
             summary = summary.head(top_n)
         return summary
+
+    def fit_distribution_by_factor(
+        self, 
+        df: pd.DataFrame, 
+        factor: str, 
+        variable: str, 
+        distribution_name: str, 
+        minimum_number_of_observations: Optional[int] = None) -> List[Dict]:
+        factor_levels = df[factor].unique().tolist()
+        distribution: rv_continuous = getattr(scipy.stats, distribution_name)
+
+        minimum_number_of_observations = minimum_number_of_observations if minimum_number_of_observations is not None else 0
+        
+        default_parameters = self.get_distribution_parameters(distribution_name)
+
+        fitted_distributions = []
+
+        for factor_level in factor_levels:
+            data = df[df[factor] == factor_level][variable].to_numpy()
+
+            number_observations = len(data)
+            if number_observations > minimum_number_of_observations:
+                parameters_names = (
+                        (distribution.shapes + ", loc, scale").split(", ")
+                        if distribution.shapes
+                        else ["loc", "scale"]
+                    )
+                estimated_parameters = distribution.fit(data=data)
+                response = {"factor_level": factor_level, "distribution": distribution_name, "parameters": {
+                    param_k: param_v for param_k, param_v in zip(parameters_names, estimated_parameters)
+                }}
+            else:
+                response = {"factor_level": factor_level, "distribution": distribution_name, "parameters": default_parameters}
+
+            fitted_distributions.append(response)
+
+        return fitted_distributions
