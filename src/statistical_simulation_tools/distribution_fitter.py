@@ -5,7 +5,6 @@ from typing import Any, Dict, List, Optional, Tuple, Union
 import numpy as np
 import pandas as pd
 import scipy.stats
-from scipy.stats import entropy as kl_div
 from scipy.stats import kstest, rv_continuous
 
 logger = logging.getLogger(__name__)
@@ -21,7 +20,6 @@ class DistributionFitterResult:
     squared_error: float
     aic: float
     bic: float
-    kullberg_divergence: float
     ks_statistic: float
     ks_p_value: float
     fitted_params: Dict[str, Union[int, float]] = field(default_factory=dict)
@@ -102,7 +100,6 @@ class DistributionFitter:
                     squared_error=np.inf,
                     aic=np.inf,
                     bic=np.inf,
-                    kullberg_divergence=np.inf,
                     ks_statistic=np.inf,
                     ks_p_value=np.inf,
                     fitted_params={},
@@ -167,9 +164,6 @@ class DistributionFitter:
         aic = 2 * k - 2 * logLik
         bic = k * np.log(n) - 2 * logLik
 
-        # Kullback Leibler divergence
-        kullberg_divergence = kl_div(fitted_pdf, y_hist)
-
         # Calculate kolmogorov-smirnov goodness-of-fit statistic for empirical distribution
         dist_fitted = distribution(**params)
         ks_statistic, ks_p_value = kstest(data, dist_fitted.cdf)
@@ -181,7 +175,6 @@ class DistributionFitter:
             squared_error=error_sum_of_squares,
             aic=aic,
             bic=bic,
-            kullberg_divergence=kullberg_divergence,
             ks_statistic=ks_statistic,
             ks_p_value=ks_p_value,
         )
@@ -206,17 +199,20 @@ class DistributionFitter:
         return summary
 
     def fit_distribution_by_factor(
-        self, 
-        df: pd.DataFrame, 
-        factor: str, 
-        variable: str, 
-        distribution_name: str, 
-        minimum_number_of_observations: Optional[int] = None) -> List[Dict]:
+        self,
+        df: pd.DataFrame,
+        factor: str,
+        variable: str,
+        distribution_name: str,
+        minimum_number_of_observations: Optional[int] = None,
+    ) -> List[Dict]:
         factor_levels = df[factor].unique().tolist()
         distribution: rv_continuous = getattr(scipy.stats, distribution_name)
 
-        minimum_number_of_observations = minimum_number_of_observations if minimum_number_of_observations is not None else 0
-        
+        minimum_number_of_observations = (
+            minimum_number_of_observations if minimum_number_of_observations is not None else 0
+        )
+
         default_parameters = self.get_distribution_parameters(distribution_name)
 
         fitted_distributions = []
@@ -227,16 +223,25 @@ class DistributionFitter:
             number_observations = len(data)
             if number_observations > minimum_number_of_observations:
                 parameters_names = (
-                        (distribution.shapes + ", loc, scale").split(", ")
-                        if distribution.shapes
-                        else ["loc", "scale"]
-                    )
+                    (distribution.shapes + ", loc, scale").split(", ")
+                    if distribution.shapes
+                    else ["loc", "scale"]
+                )
                 estimated_parameters = distribution.fit(data=data)
-                response = {"factor_level": factor_level, "distribution": distribution_name, "parameters": {
-                    param_k: param_v for param_k, param_v in zip(parameters_names, estimated_parameters)
-                }}
+                response = {
+                    "factor_level": factor_level,
+                    "distribution": distribution_name,
+                    "parameters": {
+                        param_k: param_v
+                        for param_k, param_v in zip(parameters_names, estimated_parameters)
+                    },
+                }
             else:
-                response = {"factor_level": factor_level, "distribution": distribution_name, "parameters": default_parameters}
+                response = {
+                    "factor_level": factor_level,
+                    "distribution": distribution_name,
+                    "parameters": default_parameters,
+                }
 
             fitted_distributions.append(response)
 
