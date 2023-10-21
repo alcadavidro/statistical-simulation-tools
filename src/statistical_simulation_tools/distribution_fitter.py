@@ -111,7 +111,7 @@ class DistributionFitter:
         self, data: np.ndarray, distribution_name: str, **kwargs
     ) -> DistributionParameters:
         distribution: rv_continuous = getattr(scipy.stats, distribution_name)
-        logger.info("Fitting distribution: %s", distribution_name)
+        logger.debug("Fitting distribution: %s", distribution_name)
         estimated_parameters = distribution.fit(data=data, **kwargs)
 
         parameters_names = (
