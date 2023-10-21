@@ -1,8 +1,7 @@
 import numpy as np
 import pandas as pd
 import scipy.stats
-
-from scipy.stats import skew, sem, iqr
+from scipy.stats import iqr, sem, skew
 
 
 # Distribution utils
@@ -28,7 +27,9 @@ def get_common_distributions():
         "rayleigh",
         "uniform",
     ]
-    common_distributions = [dist for dist in reference_distributions if dist in distributions]
+    common_distributions = [
+        dist for dist in reference_distributions if dist in distributions
+    ]
     return common_distributions
 
 
@@ -69,8 +70,7 @@ def doanes_bins(data: np.ndarray) -> int:
 
 def filterByLast(df: pd.DataFrame, partition_by: str, order_by: str) -> pd.DataFrame:
     return df.assign(
-        row_number=df\
-            .groupby(partition_by)[order_by]\
-                .rank(method="first", ascending=False)
-                )\
-            .query("row_number == 1")
+        row_number=df.groupby(partition_by)[order_by].rank(
+            method="first", ascending=False
+        )
+    ).query("row_number == 1")
