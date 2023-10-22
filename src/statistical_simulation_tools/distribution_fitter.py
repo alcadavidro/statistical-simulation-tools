@@ -205,6 +205,7 @@ class DistributionFitter:
         variable: str,
         distribution_name: str,
         minimum_number_of_observations: Optional[int] = None,
+        **kwargs
     ) -> List[Dict]:
         factor_levels = df[factor].unique().tolist()
         distribution: rv_continuous = getattr(scipy.stats, distribution_name)
@@ -218,16 +219,20 @@ class DistributionFitter:
         fitted_distributions = []
 
         for factor_level in factor_levels:
-            data = df[df[factor] == factor_level][variable].to_numpy()
+            pre_trimmed_data = df[df[factor] == factor_level][variable].to_numpy()
+            upper_bound = kwargs.get("upper_bound", None)
+            lower_bound = kwargs.get("lower_bound", None)
 
-            number_observations = len(data)
+            data_trimmed = self._trim_data(pre_trimmed_data, lower_bound, upper_bound)
+
+            number_observations = len(data_trimmed)
             if number_observations > minimum_number_of_observations:
                 parameters_names = (
                     (distribution.shapes + ", loc, scale").split(", ")
                     if distribution.shapes
                     else ["loc", "scale"]
                 )
-                estimated_parameters = distribution.fit(data=data)
+                estimated_parameters = distribution.fit(data=data_trimmed)
                 response = {
                     "factor_level": factor_level,
                     "distribution": distribution_name,
