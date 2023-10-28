@@ -213,8 +213,8 @@ class DistributionFitter:
         Args:
             data (np.ndarray): The data to fit the distributions to.
         """
-        lower_bound = data.min() if lower_bound is not None else lower_bound
-        upper_bound = data.max() if upper_bound is not None else upper_bound
+        lower_bound = data.min() if lower_bound is not None else -np.inf
+        upper_bound = data.max() if upper_bound is not None else np.inf
 
         data_trimmed = self._trim_data(data, lower_bound, upper_bound)
         self._data = data_trimmed
