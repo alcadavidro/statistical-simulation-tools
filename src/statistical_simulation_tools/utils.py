@@ -4,18 +4,32 @@ import scipy.stats
 from scipy.stats import iqr, sem, skew
 
 
-# Distribution utils
 def get_distributions():
+    """"
+    Get all distributions from scipy.stats that have a fit method.
+
+    :return: A list of distributions
+    """ ""
     distributions = []
     for this in dir(scipy.stats):
-        if "fit" in eval("dir(scipy.stats." + this + ")"):
+        distribution_has_fit_method: bool = "fit" in eval("dir(scipy.stats." + this + ")")
+        distribution_is_not_abstraction: bool = this not in ["rv_continuous", "rv_histogram"]
+
+        if distribution_has_fit_method and distribution_is_not_abstraction:
             distributions.append(this)
     return [distribution for distribution in distributions if distribution != "_fit"]
 
 
 def get_common_distributions():
+    """
+    Retrieve a list of common distributions from scipy.stats.
+
+    :return: A list of common distributions
+    """
+
     distributions = get_distributions()
     reference_distributions = [
+        "beta",
         "cauchy",
         "chi2",
         "expon",
@@ -31,7 +45,6 @@ def get_common_distributions():
     return common_distributions
 
 
-# Helper methods for estimating the number of bins required
 def sturges_bins(data: np.ndarray) -> int:
     """
     Sturges' rule is a method for determining the number of classes (bins) required for a histogram.

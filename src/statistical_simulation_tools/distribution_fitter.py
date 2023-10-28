@@ -1,6 +1,6 @@
 import logging
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Dict, List, Optional, Tuple, Union
 
 import numpy as np
 import pandas as pd
@@ -9,12 +9,13 @@ from scipy.stats import kstest, rv_continuous
 
 logger = logging.getLogger(__name__)
 
-
 DistributionParameters = Dict[str, Union[int, float]]
 
 
 @dataclass(init=True, repr=True, eq=True)
 class DistributionFitterResult:
+    """A class to store the results of a distribution fitting."""
+
     distribution: str
     fitted_pdf: np.ndarray
     squared_error: float
@@ -22,18 +23,13 @@ class DistributionFitterResult:
     bic: float
     ks_statistic: float
     ks_p_value: float
-    fitted_params: Dict[str, Union[int, float]] = field(default_factory=dict)
+    fitted_params: DistributionParameters = field(default_factory=dict)
 
 
 class DistributionFitter:
-    def __init__(
-        self,
-        distributions: List[str],
-        bins: int = 100,
-        kde: bool = True,
-    ) -> None:
-        self._data: np.ndarray = None
-        self._results: Dict[str, Any] = {}
+    def __init__(self, distributions: List[str], bins: int = 100, kde: bool = True) -> None:
+        self._data: Optional[np.ndarray] = None
+        self._results: Dict[str, DistributionFitterResult] = {}
         self._distributions: List[str] = distributions
         self._bins: int = bins
         self._kde: bool = kde
@@ -41,19 +37,21 @@ class DistributionFitter:
 
     @property
     def is_fitted(self) -> bool:
+        """Check if the distribution fitter is fitted."""
         return self._is_fitted
+
+    def validate_distribution(self, distribution_name: str) -> bool:
+        """Validate that a distribution has been fitted."""
+        if not self._is_fitted:
+            raise ValueError("DistributionFitter must be fitted before validating distributions.")
+        return distribution_name in self._distributions
 
     @staticmethod
     def _trim_data(
-        data: np.ndarray,
-        lower_bound: Optional[Union[int, float]] = None,
-        upper_bound: Optional[Union[int, float]] = None,
+        data: np.ndarray, lower_bound: float = -np.inf, upper_bound: float = np.inf
     ) -> np.ndarray:
-        upper_bound = upper_bound if upper_bound is not None else data.max()
-        lower_bound = lower_bound if lower_bound is not None else data.min()
-
-        data_trimmed = data[np.logical_and(data >= lower_bound, data <= upper_bound)]
-        return data_trimmed
+        """Trim data based on lower and upper bounds."""
+        return data[(data >= lower_bound) & (data <= upper_bound)]
 
     @staticmethod
     def get_histogram(
@@ -107,8 +105,9 @@ class DistributionFitter:
         # Changing the state of the object to fitted
         self._is_fitted = True
 
+    @staticmethod
     def fit_single_distribution(
-        self, data: np.ndarray, distribution_name: str, **kwargs
+        data: np.ndarray, distribution_name: str, **kwargs
     ) -> DistributionParameters:
         distribution: rv_continuous = getattr(scipy.stats, distribution_name)
         logger.debug("Fitting distribution: %s", distribution_name)
@@ -151,6 +150,11 @@ class DistributionFitter:
         fitted_pdf: np.ndarray,
         distribution_name: str,
     ) -> DistributionFitterResult:
+        """
+        Extract the goodness of fit metrics for a given distribution and its parameters
+
+        """
+
         distribution: rv_continuous = getattr(scipy.stats, distribution_name)
         y_hist, x_hist = self.get_histogram(data=data, bins=self._bins, density=self._kde)
 
@@ -158,13 +162,10 @@ class DistributionFitter:
         k = len(params)
         n = len(data)
 
-        # Goodness of fit metrics
-        ##
         error_sum_of_squares = np.sum((fitted_pdf - y_hist) ** 2)
         aic = 2 * k - 2 * logLik
         bic = k * np.log(n) - 2 * logLik
 
-        # Calculate kolmogorov-smirnov goodness-of-fit statistic for empirical distribution
         dist_fitted = distribution(**params)
         ks_statistic, ks_p_value = kstest(data, dist_fitted.cdf)
 
@@ -182,6 +183,11 @@ class DistributionFitter:
     def summary(self, sort_by: Optional[str] = None, top_n: Optional[int] = None) -> pd.DataFrame:
         """
         Returns a summary of the fitted distributions
+
+        param sort_by: The column to sort by
+        param top_n: The number of rows to return
+
+        return: A pandas dataframe with the summary
         """
 
         assert self._is_fitted, "You need to fit the distribution first"
